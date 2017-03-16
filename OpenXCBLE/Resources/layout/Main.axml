@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:id="@+id/relLayout">
+        <TextView
+            android:text="..."
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:layout_height="wrap_content"
+            android:layout_width="80dip"
+            android:padding="10dip"
+            android:id="@+id/txData"
+            android:maxLines="1" />
+        <Switch
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/tglSwitch"
+            android:padding="10dip"
+            android:layout_below="@id/txData"
+            android:layout_centerHorizontal="true"
+            android:text="HD " />
+        <Button
+            android:text="Record"
+            android:id="@+id/btnRecord"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tglSwitch"
+            android:padding="10dip" />
+        <LinearLayout
+            android:layout_width="20dip"
+            android:layout_height="20dip"
+            android:id="@+id/circ"
+            android:padding="10dip"
+            android:layout_below="@id/btnRecord"
+            android:background="@drawable/reccircle"
+            android:layout_centerHorizontal="true" />
+        <Button
+            android:text="Stop"
+            android:id="@+id/btnStop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="10dip"
+            android:layout_below="@id/circ" />
+        <Button
+            android:text="Play"
+            android:id="@+id/btnPlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="10dip"
+            android:layout_below="@id/btnStop" />
+    </RelativeLayout>
+    <VideoView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/videoView1" />
+</LinearLayout>
