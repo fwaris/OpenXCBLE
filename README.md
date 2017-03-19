@@ -11,7 +11,7 @@ storage of the device (which is not likely an external storage card these days).
 
 (Note: this application was tested on Samsung S6 and LG V10 devices both running Android 6.0 or higher)
 
-##Getting Started
+## Getting Started
 
 This repo is a Visual Studio solution (for version 2017 at the time of writing).
 The solution contains one project which is a Xamarin Android application written in
@@ -25,17 +25,17 @@ If you are not familiar with Xamarin development, you might try [this page] (htt
 For Xamarin development with F#, here is an older [video by Rachael Reese] (https://www.youtube.com/watch?v=H9uzJFM2Hl)
 that might be useful.
 
-##Bluetooth Notes
+## Bluetooth Notes
 If you are mainly interested in understanding BLE connectivity to OpenXC, focus on two files:
 
 - BLEScan.fs
 - BLEStateMachine.fs
 
-###BLEScan.fs
+### BLEScan.fs
 Contains the code to scan for the OpenXC C5BLE device. It calls the Android API for Bluetooth
 scanning and utilizes an implementation of the Android.Bluetooth.LE.ScanCallback interface.
 
-###BLEStateMachine.fs
+### BLEStateMachine.fs
 Contains the code to look for the correct BLE 'characteristic' for receiving data from OpenXC 
 and then register for data notifications. The code uses an implementation of the
 Android.Bluetooth.BluetoothGattCallback interface. 
