@@ -31,20 +31,25 @@
             android:layout_below="@id/tglSwitch"
             android:padding="10dip" />
         <LinearLayout
-            android:layout_width="20dip"
-            android:layout_height="20dip"
-            android:id="@+id/circ"
-            android:padding="10dip"
+            android:layout_width="30dip"
+            android:layout_height="30dip"
+            android:id="@+id/circL"
+            android:padding="5dip"
             android:layout_below="@id/btnRecord"
-            android:background="@drawable/reccircle"
-            android:layout_centerHorizontal="true" />
+            android:layout_centerHorizontal="true">
+            <View
+                android:id="@+id/circ"
+                android:layout_height="match_parent"
+                android:layout_width="match_parent"
+                android:background="@drawable/reccircle" />
+        </LinearLayout>
         <Button
             android:text="Stop"
             android:id="@+id/btnStop"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:padding="10dip"
-            android:layout_below="@id/circ" />
+            android:layout_below="@id/circL" />
         <Button
             android:text="Play"
             android:id="@+id/btnPlay"

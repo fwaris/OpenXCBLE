@@ -21,9 +21,10 @@
     <TargetFrameworkProfile />
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
     <Name>OpenXCBLE</Name>
-    <SelectedDevice>Samsung SM-G920V</SelectedDevice>
+    <SelectedDevice>Android_Accelerated_x86</SelectedDevice>
     <DefaultDevice>Android_Accelerated_x86</DefaultDevice>
     <AndroidDesignerPreferredDevice>Nexus 4</AndroidDesignerPreferredDevice>
+    <AndroidDesignerPreferredTheme>Theme.Material.Dialog.NoActionBar.FixedSize</AndroidDesignerPreferredTheme>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>

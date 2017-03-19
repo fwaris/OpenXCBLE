@@ -23,10 +23,10 @@ namespace OpenXCBLE
     #nowarn "51" // address-of operator can occur in the code
     #nowarn "1183" // unused 'this' reference
     
-    exception ReturnException872b9b2f20b6496e98980a44362738e8 of obj
-    exception ReturnNoneException872b9b2f20b6496e98980a44362738e8
+    exception ReturnExceptionc61a6f78a84545a0b91daf11fca4a44f of obj
+    exception ReturnNoneExceptionc61a6f78a84545a0b91daf11fca4a44f
     [<AutoOpen>]
-    module FuncConvertFinalOverload872b9b2f20b6496e98980a44362738e8 =
+    module FuncConvertFinalOverloadc61a6f78a84545a0b91daf11fca4a44f =
       // This extension member adds to the FuncConvert type and is the last resort member in the method overloading rules. 
       type global.Microsoft.FSharp.Core.FuncConvert with
           /// A utility function to convert function values from tupled to curried form
@@ -68,17 +68,20 @@ namespace OpenXCBLE
         
         (* partial *)Resource_Id () =
             static do Android.Runtime.ResourceIdManager.UpdateIdValues()
-            // aapt resource value: 0x7f050006
-            static member btnPlay = 2131034118
+            // aapt resource value: 0x7f050007
+            static member btnPlay = 2131034119
             
             // aapt resource value: 0x7f050003
             static member btnRecord = 2131034115
             
+            // aapt resource value: 0x7f050006
+            static member btnStop = 2131034118
+            
             // aapt resource value: 0x7f050005
-            static member btnStop = 2131034117
+            static member circ = 2131034117
             
             // aapt resource value: 0x7f050004
-            static member circ = 2131034116
+            static member circL = 2131034116
             
             // aapt resource value: 0x7f050000
             static member relLayout = 2131034112
@@ -89,8 +92,8 @@ namespace OpenXCBLE
             // aapt resource value: 0x7f050001
             static member txData = 2131034113
             
-            // aapt resource value: 0x7f050007
-            static member videoView1 = 2131034119
+            // aapt resource value: 0x7f050008
+            static member videoView1 = 2131034120
             (* Member of type 'CodeTypeConstructor' is not supported by the CodeDOM provider and was omitted *)
 
 

@@ -15,7 +15,7 @@ open Android.Bluetooth
 open Android.Bluetooth.LE
 open Android.Hardware.Camera2
 
-type UIState = Ready | Starting | Recording | Stopping | Playing                            //user interface states
+type UIState = Ready | Starting | BtConnected | Stopping | Playing                            //user interface modes
 
 type RecordFiles = {Writer:System.IO.StreamWriter; VideoPath:string; DataPath:string} with  //structure to hold recording data
                     static member Default = {Writer=null; VideoPath=""; DataPath=""}
@@ -26,28 +26,40 @@ type RecordFiles = {Writer:System.IO.StreamWriter; VideoPath:string; DataPath:st
     ScreenOrientation = PM.ScreenOrientation.Landscape)>]
 type MainActivity () =
     inherit Activity ()
-    let uiCtx = System.Threading.SynchronizationContext.Current         //holds the UI context for thread synchronization when 
+    let uiCtx = Android.App.Application.SynchronizationContext          //holds the UI context for thread synchronization when 
                                                                         //background threads want to update the UI
     
-    let mutable uiMode      = Ready                                             //current UI mode / state
-    let mutable gatt        : GattMachine option = None                         //init the bluetooth object that will provide the notifications
+    let mutable uiMode      = Ready                                             //current UI mode
+    let mutable gatt        : GattMachine option = None                         //init the variable for the bluetooth object that will provide the notifications
     let mutable cts         = new System.Threading.CancellationTokenSource()    //token to cancel background processing when done
     let mutable agent       : MailboxProcessor<string> = Unchecked.defaultof<_> //agent that asynchronously receives and processes messages
     let mutable recorder    : MediaRecorder = null                              //video recorder
     let mutable canData     = ""                                                //small amount of CAN data to display on the main window
     let mutable recordFiles = RecordFiles.Default                               //initialize recoding location
 
+    //controls
+    let mutable btnRecord = null
+    let mutable btnPlay   = null
+    let mutable btnStop   = null
+    let mutable tglHD     = null
+    let mutable ctrlVideo = null
+    let mutable crcRec    = null
+    let mutable txData    = null
+
     let enable  = List.iter (fun (c:View) -> c.Enabled <- true )                //functions to enable / disable / hide / show UI components
     let disable = List.iter (fun (c:View) -> c.Enabled <- false )
-    let visible = List.iter (fun (c:View) -> c.Visibility <- ViewStates.Visible )
-    let hide    = List.iter (fun (c:View) -> c.Visibility <- ViewStates.Invisible )
+    let visible = List.iter (fun (c:View) -> c.Visibility <- ViewStates.Visible; c.RequestLayout())
+    let hide    = List.iter (fun (c:View) -> c.Visibility <- ViewStates.Invisible)
 
-    let doUIWork f =                                                            //schedule something to work on the UI thread
-        async {
-            do! Async.SwitchToContext uiCtx //switch to ui thread
-            f()
-        } 
-        |> Async.Start
+    let doUIWork f =                                                            //run the given function f on the UI thread
+        if System.Threading.SynchronizationContext.Current = uiCtx then
+            f()                                                                 //just execute it, if call already on UI thread
+        else
+            async {                                                             //spawn a new background task
+                do! Async.SwitchToContext uiCtx                                 //switch to ui thread
+                f()                                                             //run the function
+            } 
+            |> Async.Start
 
     let saveData (strw:StreamWriter) (j:FsJson.Json) =                          //save can bus message to file
 //        let dbs = j |> FsJson.serialize
@@ -68,10 +80,10 @@ type MainActivity () =
         let elapsed = (DateTime.UtcNow - unix_epoch).TotalMilliseconds
         string elapsed
 
-    let genPaths isHD =                                                           //create new file names for video and data files
+    let genPaths isHD =                                                           //generate new file names for video and data files
         let ts = currentTS().Replace(".","_")
         let p  = Android.OS.Environment.ExternalStorageDirectory.AbsolutePath
-        let p  = p + "/t2"
+        let p  = p + "/C5BLE"
         if Directory.Exists(p) |> not then Directory.CreateDirectory(p) |> ignore
         let pfx = if isHD then "h_" else ""
         let videoPath = sprintf "%s/%sv%s.mp4" p pfx ts
@@ -102,7 +114,7 @@ type MainActivity () =
             async {
                 try 
                     let! s = mb.Receive()                                //we got a message in the mailbox
-                    return! loop (addString recordFiles.Writer fsm s)    //check to see if it can be added and loop with the next state
+                    return! loop (addString recordFiles.Writer fsm s)    //check to see if it can be added and then loop with the next state
                 with ex -> logE ex.Message
             }
         and start fsm =                                                  //this is the start loop that does one-time processing
@@ -113,7 +125,7 @@ type MainActivity () =
                     return! loop (addString recordFiles.Writer fsm s)
                 with ex -> logE (sprintf "storeCanDataAgent %s" ex.Message)
             }
-        start (M(Messages.tick [],None))                                  //the function returns this which is the configured start loop with the state machine
+        start (M(Messages.tick [],None))                                  //return the agent initilized for start up processing
                                                                           //look at message.fs for how the message assembly state machine works
 
     let startAgent(tx:TextView) =                                         //turn on the async messaging agent
@@ -147,29 +159,36 @@ type MainActivity () =
         recordFiles <- {Writer=strm; VideoPath=videoPath; DataPath=dataPath}
 
     let stopRecording() =                                                   //stop the video recorder
-       if recorder <> null then 
-          recorder.Stop()
-          recorder.Release()
-          recorder <- null
+        try
+           if recorder <> null then 
+              recorder.Stop()
+              recorder.Release()
+              recorder <- null
+        with ex ->
+            recorder <- null
+            logI ex.Message
 
     let startRecording (tglHD:Switch) (ctrlVideo:VideoView) =               //start the video recorder
-        ctrlVideo.StopPlayback()
-        recorder <- new MediaRecorder()
-        recorder.SetVideoSource(VideoSource.Default)
-        recorder.SetOutputFormat(OutputFormat.Mpeg4)
-        if tglHD.Checked then
-            recorder.SetVideoSize(640,480)
-        recorder.SetVideoFrameRate(30)
-        recorder.SetMaxDuration(30*60*1000)
-        recorder.SetVideoEncodingBitRate(3000000/2)
-        recorder.SetVideoEncoder(VideoEncoder.Mpeg4Sp)
-        recorder.SetOutputFile(recordFiles.VideoPath)
-        recorder.SetPreviewDisplay(ctrlVideo.Holder.Surface)
-        recorder.Prepare()
-        recorder.Start()
+        try
+            ctrlVideo.StopPlayback()
+            recorder <- new MediaRecorder()
+            recorder.SetVideoSource(VideoSource.Default)
+            recorder.SetOutputFormat(OutputFormat.Mpeg4)
+            if tglHD.Checked then
+                recorder.SetVideoSize(640,480)
+            recorder.SetVideoFrameRate(30)
+            recorder.SetMaxDuration(30*60*1000)
+            recorder.SetVideoEncodingBitRate(3000000/2)
+            recorder.SetVideoEncoder(VideoEncoder.Mpeg4Sp)
+            recorder.SetOutputFile(recordFiles.VideoPath)
+            recorder.SetPreviewDisplay(ctrlVideo.Holder.Surface)
+            recorder.Prepare()
+            recorder.Start()
+        with ex ->
+            logI ex.Message
 
     let disconnect() =                                                        //disconnect from bluetooth
-        match gatt with Some g -> g.Disconnect() | _ -> ()
+        async {match gatt with Some g -> g.Disconnect() | _ -> ()} |> Async.Start
         gatt <- None
 
     let connect fUIUpdate =                                                   //connect to bluetooth, fUIUpdate is function to update the UI
@@ -199,48 +218,45 @@ type MainActivity () =
         disconnect()
         closeFile()
 
+    let updateUIState(r) =                                                       //function that updates the UI depending on the UI mode/state
+        uiMode <- r
+        //logI (match r with Ready->"ready"|Starting->"starting"|Stopping->"stopping"|Recording->"recording"|Playing->"playing")
+        doUIWork(fun () ->
+        match uiMode with
+        | Ready     ->  enable  [btnRecord; btnPlay] 
+                        disable [btnStop]
+                        hide [crcRec]
+        | Starting  
+        | Stopping  ->  disable [btnRecord; btnPlay]
+                        enable  [btnStop]
+                        hide    [crcRec]
+        | BtConnected ->disable [btnRecord; btnPlay]
+                        enable  [btnStop]
+                        visible [crcRec]
+                        (txData:TextView).Text <- "..."
+        | Playing   ->  disable [btnRecord; btnPlay]
+                        enable  [btnStop]
+        )
+
+    let updateUIOnConnection (tx:TextView) isConnected =                     //update the UI based on connected or not
+        if isConnected then
+            updateUIState BtConnected
+        else
+            updateUIState Ready
+            tx.Text <- sprintf "[%s]" tx.Text
+
     override this.OnCreate (bundle) =                                                //android oncreate method create UI and initialize
         base.OnCreate (bundle)
-
         this.RequestWindowFeature(WindowFeatures.NoTitle) |> ignore
         this.SetContentView (Resource_Layout.Main)
-
-        let btnRecord = this.FindViewById<Button>(Resource_Id.btnRecord)             //find all UI controls
-        let btnPlay   = this.FindViewById<Button>(Resource_Id.btnPlay)
-        let btnStop   = this.FindViewById<Button>(Resource_Id.btnStop)
-        let tglHD     = this.FindViewById<Switch>(Resource_Id.tglSwitch)
-        let ctrlVideo = this.FindViewById<VideoView>(Resource_Id.videoView1)
-        let crcRec    = this.FindViewById<View>(Resource_Id.circ)
-        let txData    = this.FindViewById<TextView>(Resource_Id.txData)
-
-        let updateUIState(r) =                                                       //function that updates the UI depending on the UI mode/state
-            uiMode <- r
-            doUIWork(fun () ->
-            match uiMode with
-            | Ready     ->  enable  [btnRecord; btnPlay] 
-                            disable [btnStop]
-                            hide    [crcRec]
-            | Starting  
-            | Stopping  ->  disable [btnRecord; btnPlay]
-                            enable  [btnStop]
-                            hide    [crcRec]
-            | Recording ->  disable [btnRecord; btnPlay]
-                            enable  [btnStop]
-                            visible [crcRec]
-                            txData.Text <- "..."
-            | Playing   ->  disable [btnRecord; btnPlay; btnStop]
-                            enable  [btnStop]
-            )
-
-        updateUIState Ready                                                       //intially go into Ready state
-
-        let updateUIOnConnection (tx:TextView) isConnected =                     //update the UI based on connected or not
-            if isConnected then
-                updateUIState Recording
-            else
-                updateUIState Ready
-                tx.Text <- sprintf "[%s]" tx.Text
-
+        btnRecord <- this.FindViewById<Button>(Resource_Id.btnRecord)             //find all UI controls
+        btnPlay   <- this.FindViewById<Button>(Resource_Id.btnPlay)
+        btnStop   <-this.FindViewById<Button>(Resource_Id.btnStop)
+        tglHD     <- this.FindViewById<Switch>(Resource_Id.tglSwitch)
+        ctrlVideo <- this.FindViewById<VideoView>(Resource_Id.videoView1)
+        crcRec    <- this.FindViewById<View>(Resource_Id.circ)
+        txData    <- this.FindViewById<TextView>(Resource_Id.txData)
+        
         btnRecord.Click.Add (fun _ ->                                            //event  handler for record button is pressed
             updateUIState Starting
             openFile tglHD.Checked
@@ -268,6 +284,10 @@ type MainActivity () =
             ctrlVideo.SetVideoURI(uri)
             ctrlVideo.Start()
             )
+
+    override this.OnStart() = 
+        base.OnStart()
+        updateUIState Ready
 
     override x.OnDestroy() =                                                 //android view exit handler
         base.OnDestroy()
